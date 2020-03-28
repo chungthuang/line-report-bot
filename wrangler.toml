@@ -1,0 +1,4 @@
+name = "report-bot"
+type = "rust"
+account_id = "190aaf52afd86d34a948f3c02fb715e6"
+workers_dev = true
