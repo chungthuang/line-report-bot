@@ -7,24 +7,20 @@ addEventListener('fetch', event => {
  * @param {Request} request
  */
 async function handleRequest(request) {
-  const { greet } = wasm_bindgen;
+  const { collect_report } = wasm_bindgen;
   await wasm_bindgen(wasm)
 
-  const body = await request.json()
-    .then(data => {
-      return data;
-    });
-
-  botConfig = {
+  const botConfig = {
     channel_secret: CHANNEL_SECRET,
+    channel_access_token: CHANNEL_ACCESS_TOKEN,
   }
-  const greeting = greet(body, request.headers, botConfig)
+  result = await collect_report(request, botConfig)
     .then(result => {
       return result
     })
     .catch(err => {
       console.log("greet failed because ", err)
-      return new Response("your signature is invalid", { status: 200 })
+      return new Response("collect_report failed", { status: 200 })
     })
-  return new Response("recognize signature", { status: 200 })
+  return new Response("collect_report succeed", { status: 200 })
 }
