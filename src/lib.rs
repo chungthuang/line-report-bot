@@ -8,14 +8,16 @@ extern crate wasm_bindgen;
 extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
+mod calendar;
 mod line;
 mod post;
 mod route;
 mod utils;
 
+use calendar::calendar_start;
 use cfg_if::cfg_if;
 use hmac::{Hmac, Mac};
-use line::{LineClient, TextMessage};
+use line::{BotConfig, LineClient, TextMessage};
 use route::Route;
 use sha2::Sha256;
 use url::Url;
@@ -45,12 +47,6 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
-#[derive(Deserialize, Debug)]
-struct BotConfig {
-    channel_secret: String,
-    channel_access_token: String,
-}
-
 #[wasm_bindgen]
 pub async fn collect_report(req: JsValue, bot_config: JsValue) -> Result<JsValue, JsValue> {
     let config: BotConfig = bot_config.into_serde().map_err(|e| e.to_string())?;
@@ -60,7 +56,8 @@ pub async fn collect_report(req: JsValue, bot_config: JsValue) -> Result<JsValue
 
     let path = url.path();
     let result = match Route::from(path) {
-        Route::Report => report(req, config).await,
+        Route::CalendarStart => calendar_start(req, config).await,
+        Route::CalendarEnd => report(req, config).await,
         Route::Submit => submit(req, config).await,
         Route::Unhandled => Err(unhandled(path)),
     }?;
@@ -88,7 +85,7 @@ async fn submit(req: Request, bot_config: BotConfig) -> Result<(), JsValue> {
     console_log!("receive submission {:?}", body);
     let line_client = LineClient {
         channel_access_token: bot_config.channel_access_token,
-        target_group_id: "C06daa9f0609c6c6b73aad49153479ad0".to_string(),
+        target_group_id: bot_config.target_group_id,
     };
 
     let report = TextMessage::new(
