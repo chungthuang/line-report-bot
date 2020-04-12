@@ -78,7 +78,7 @@ impl LineClient {
         );
         headers.insert("Content-type".to_string(), "application/json".to_string());
         let req = Request {
-            url: "https://api.line.me/v2/bot/message/push".to_string(),
+            url: url.to_string(),
             headers: headers,
             body: body,
         };

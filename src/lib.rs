@@ -24,6 +24,7 @@ use line::{BotConfig, LineClient, MessageObject, TextMessage};
 use route::Route;
 use sha2::Sha256;
 use url::Url;
+use utils::console_log;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Request;
@@ -37,18 +38,6 @@ cfg_if! {
         #[global_allocator]
         static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
     }
-}
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
-macro_rules! console_log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
 #[wasm_bindgen]
@@ -78,7 +67,7 @@ pub async fn collect_report(
 async fn report(req: Request, bot_config: BotConfig) -> Result<(), JsValue> {
     let signature = req.headers().get("X-Line-Signature")?;
     let body = JsFuture::from(req.json()?).await?;
-    console_log!("req body {:?}", body);
+    console_log(&format!("req body {:?}", body));
     /*verify_request(
         signature.to_string(),
         config.channel_secret,
@@ -92,7 +81,7 @@ async fn report(req: Request, bot_config: BotConfig) -> Result<(), JsValue> {
 
 async fn submit(req: Request, bot_config: BotConfig) -> Result<(), JsValue> {
     let body = JsFuture::from(req.text()?).await?;
-    console_log!("receive submission {:?}", body);
+    console_log(&format!("receive submission {:?}", body));
     let line_client = LineClient {
         channel_access_token: bot_config.channel_access_token,
         target_group_id: bot_config.target_group_id,
@@ -104,7 +93,7 @@ async fn submit(req: Request, bot_config: BotConfig) -> Result<(), JsValue> {
             .ok_or("/submit receive body that is not text")?,
     };
     line_client.push_message(report).await?;
-    console_log!("pushed message");
+    console_log("pushed message");
     Ok(())
 }
 

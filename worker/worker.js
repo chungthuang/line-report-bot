@@ -17,7 +17,7 @@ async function handleRequest(request) {
   }
 
   const formsConfig = {
-    newUserForm = NEW_USER_FORM,
+    new_user_form: NEW_USER_FORM,
   }
 
   result = await collect_report(request, botConfig, formsConfig)
