@@ -9,21 +9,25 @@ extern crate wasm_bindgen_futures;
 extern crate web_sys;
 
 mod calendar;
+mod flex_messages;
 mod line;
 mod post;
 mod route;
 mod utils;
+mod webhooks;
 
 use calendar::calendar_start;
 use cfg_if::cfg_if;
+use flex_messages::new_user_message;
 use hmac::{Hmac, Mac};
-use line::{BotConfig, LineClient, TextMessage};
+use line::{BotConfig, LineClient, MessageObject, TextMessage};
 use route::Route;
 use sha2::Sha256;
 use url::Url;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Request;
+use webhooks::webhooks;
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -48,17 +52,23 @@ macro_rules! console_log {
 }
 
 #[wasm_bindgen]
-pub async fn collect_report(req: JsValue, bot_config: JsValue) -> Result<JsValue, JsValue> {
-    let config: BotConfig = bot_config.into_serde().map_err(|e| e.to_string())?;
+pub async fn collect_report(
+    req: JsValue,
+    bot_config: JsValue,
+    forms_config: JsValue,
+) -> Result<JsValue, JsValue> {
+    let bot_config: BotConfig = bot_config.into_serde().map_err(|e| e.to_string())?;
+    let forms_config: FormsConfig = forms_config.into_serde().map_err(|e| e.to_string())?;
     let req = Request::from(req);
     let url_str = req.url();
     let url = Url::parse(&url_str).map_err(|_| format!("{:?} is not a valid url", url_str))?;
 
     let path = url.path();
     let result = match Route::from(path) {
-        Route::CalendarStart => calendar_start(req, config).await,
-        Route::CalendarEnd => report(req, config).await,
-        Route::Submit => submit(req, config).await,
+        Route::CalendarStart => calendar_start(req, bot_config).await,
+        Route::CalendarEnd => report(req, bot_config).await,
+        Route::Webhooks => webhooks(req, bot_config, forms_config).await,
+        Route::Submit => submit(req, bot_config).await,
         Route::Unhandled => Err(unhandled(path)),
     }?;
 
@@ -88,10 +98,11 @@ async fn submit(req: Request, bot_config: BotConfig) -> Result<(), JsValue> {
         target_group_id: bot_config.target_group_id,
     };
 
-    let report = TextMessage::new(
-        body.as_string()
+    let report = MessageObject::Text {
+        text: body
+            .as_string()
             .ok_or("/submit receive body that is not text")?,
-    );
+    };
     line_client.push_message(report).await?;
     console_log!("pushed message");
     Ok(())
@@ -111,4 +122,9 @@ fn verify_request(signature: String, channel_secret: String, body: &[u8]) -> Res
     mac.verify(signature.as_bytes())
         .map_err(|_| "Request signature mismatch")?;
     Ok(())
+}
+
+#[derive(Deserialize, Debug)]
+pub struct FormsConfig {
+    new_user_form: String,
 }
