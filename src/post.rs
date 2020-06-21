@@ -1,3 +1,4 @@
+use super::console_log;
 use serde::Serialize;
 use std::collections::HashMap;
 use wasm_bindgen::{JsCast, JsValue};
@@ -22,6 +23,7 @@ where
     // Equivalent to JSON.stringify in JS
     let body = JsValue::from_str(&serde_json::to_string(&req.body)?);
     opts.body(Some(&body));
+    console_log(&format!("post body {:?}", body));
 
     let request = web_sys::Request::new_with_str_and_init(&req.url, &opts)?;
     for (k, v) in req.headers.iter() {

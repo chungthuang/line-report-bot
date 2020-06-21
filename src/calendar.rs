@@ -1,4 +1,4 @@
-use super::{BotConfig, LineClient, TextMessage};
+use super::{BotConfig, LineClient, MessageObject};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Request;
@@ -28,7 +28,9 @@ pub async fn calendar_start(req: Request, bot_config: BotConfig) -> Result<(), J
     let body = JsFuture::from(req.json()?).await?;
     let event: CalendarStartEvent = body.into_serde().map_err(|e| e.to_string())?;
 
-    let report = TextMessage::new(event.compose_message());
+    let report = MessageObject::Text {
+        text: event.compose_message(),
+    };
     line_client.push_message(report).await?;
     Ok(())
 }

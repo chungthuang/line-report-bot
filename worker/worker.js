@@ -13,8 +13,14 @@ async function handleRequest(request) {
   const botConfig = {
     channel_secret: CHANNEL_SECRET,
     channel_access_token: CHANNEL_ACCESS_TOKEN,
+    target_group_id: TARGET_GROUP_ID,
   }
-  result = await collect_report(request, botConfig)
+
+  const formsConfig = {
+    new_user_form: NEW_USER_FORM,
+  }
+
+  result = await collect_report(request, botConfig, formsConfig)
     .then(result => {
       return result
     })

@@ -1,5 +1,9 @@
 use cfg_if::cfg_if;
 
+use js_sys::Array;
+use wasm_bindgen::prelude::*;
+use web_sys::console;
+
 cfg_if! {
     // When the `console_error_panic_hook` feature is enabled, we can call the
     // `set_panic_hook` function at least once during initialization, and then
@@ -14,4 +18,8 @@ cfg_if! {
         #[inline]
         pub fn set_panic_hook() {}
     }
+}
+
+pub fn console_log(log: &str) {
+    console::log_1(&log.into());
 }

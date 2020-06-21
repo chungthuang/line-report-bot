@@ -65,7 +65,7 @@ func serveHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Failed to read request body, err: ", err)
 		return
 	}
-	fmt.Println("Request body: ", body)
+	fmt.Println("Request body: ", string(body))
 	w.Write([]byte("Read your request\n"))
 }
 

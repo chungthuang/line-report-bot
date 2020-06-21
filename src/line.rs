@@ -1,4 +1,6 @@
 use super::post::{post, PostError, Request};
+use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
@@ -14,28 +16,61 @@ pub struct LineClient {
 }
 
 #[derive(Serialize, Debug)]
-pub struct TextMessage {
-    r#type: String,
-    text: String,
-}
-
-impl TextMessage {
-    pub fn new(text: String) -> TextMessage {
-        TextMessage {
-            r#type: "text".to_string(),
-            text: text,
-        }
-    }
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "type")]
+pub enum MessageObject {
+    Text { text: String },
+    Flex(Value),
 }
 
 #[derive(Serialize, Debug)]
+pub struct TextMessage {
+    text: String,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplyMessageBody {
+    reply_token: String,
+    messages: Vec<MessageObject>,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct PushMessageBody {
     to: String,
-    messages: Vec<TextMessage>,
+    messages: Vec<MessageObject>,
 }
 
 impl LineClient {
-    pub async fn push_message(&self, message: TextMessage) -> Result<(), PostError> {
+    pub async fn reply_message(
+        &self,
+        message: MessageObject,
+        reply_token: String,
+    ) -> Result<(), PostError> {
+        let body = ReplyMessageBody {
+            reply_token: reply_token,
+            messages: vec![message],
+        };
+        self.post("https://api.line.me/v2/bot/message/reply", body)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn push_message(&self, message: MessageObject) -> Result<(), PostError> {
+        let body = PushMessageBody {
+            to: self.target_group_id.clone(),
+            messages: vec![message],
+        };
+        self.post("https://api.line.me/v2/bot/message/push", body)
+            .await?;
+        Ok(())
+    }
+
+    async fn post<T>(&self, url: &str, body: T) -> Result<(), PostError>
+    where
+        T: Serialize,
+    {
         let mut headers = HashMap::new();
         headers.insert(
             "Authorization".to_string(),
@@ -43,12 +78,9 @@ impl LineClient {
         );
         headers.insert("Content-type".to_string(), "application/json".to_string());
         let req = Request {
-            url: "https://api.line.me/v2/bot/message/push".to_string(),
+            url: url.to_string(),
             headers: headers,
-            body: PushMessageBody {
-                to: self.target_group_id.clone(),
-                messages: vec![message],
-            },
+            body: body,
         };
         post(req).await?;
         Ok(())
